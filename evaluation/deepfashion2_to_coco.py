@@ -1,6 +1,25 @@
+import glob
 import json
+import os
 from PIL import Image
 import numpy as np
+
+from toolbox_az.general import flags
+
+flags = flags.Flags()
+
+flags.add_argument('--dataset_dir', type=str,
+                   default=None,
+                   help='Path to dataset dir.')
+flags.add_argument('--image_dirname', type=str, default='image',
+                   help='Name of image dir.')
+
+flags.add_argument('--annotation_dirname', type=str, default='annos',
+                   help='Name of annotation dir.')
+
+flags.add_argument('--json_output_filename', type=str,
+                   default='deepfashion2_coco.json',
+                   help='Name of output json filename to save dataset annotations.')
 
 
 dataset = {
@@ -103,136 +122,136 @@ dataset['categories'].append({
     'skeleton': []
 })
 
+image_dir = os.path.join(flags.dataset_dir, flags.image_dirname)
+annotation_dir = os.path.join(flags.dataset_dir, flags.annotation_dirname)
+image_paths = sorted(glob.glob(os.path.join(image_dir, '*.jpg')))
+annotation_paths = sorted(glob.glob(os.path.join(annotation_dir, '*.json')))
+
 sub_index = 0 # the index of ground truth instance
-for num in range(1,num_images+1):
-    json_name = '/.../val_annos/' + str(num).zfill(6)+'.json'
-    image_name = '/.../val/' + str(num).zfill(6)+'.jpg'
+for index, (image_path, json_path) in enumerate(zip(image_paths, annotation_paths)):
 
-    if (num>=0):
-        imag = Image.open(image_name)
-        width, height = imag.size
-        with open(json_name, 'r') as f:
-            temp = json.loads(f.read())
-            pair_id = temp['pair_id']
+    imag = Image.open(image_path)
+    width, height = imag.size
+    with open(json_path, 'r') as f:
+        temp = json.loads(f.read())
+        pair_id = temp['pair_id']
 
-            dataset['images'].append({
-                'coco_url': '',
-                'date_captured': '',
-                'file_name': str(num).zfill(6) + '.jpg',
-                'flickr_url': '',
-                'id': num,
-                'license': 0,
-                'width': width,
-                'height': height
-            })
-            for i in temp:
-                if i == 'source' or i=='pair_id':
-                    continue
-                else:
-                    points = np.zeros(294 * 3)
-                    sub_index = sub_index + 1
-                    box = temp[i]['bounding_box']
-                    w = box[2]-box[0]
-                    h = box[3]-box[1]
-                    x_1 = box[0]
-                    y_1 = box[1]
-                    bbox=[x_1,y_1,w,h]
-                    cat = temp[i]['category_id']
-                    style = temp[i]['style']
-                    seg = temp[i]['segmentation']
-                    landmarks = temp[i]['landmarks']
+        dataset['images'].append({
+            'coco_url': '',
+            'date_captured': '',
+            'file_name': os.path.basename(image_path),
+            'flickr_url': '',
+            'id': index+1,
+            'license': 0,
+            'width': width,
+            'height': height
+        })
+        for i in temp:
+            if i == 'source' or i=='pair_id':
+                continue
+            else:
+                points = np.zeros(294 * 3)
+                sub_index = sub_index + 1
+                box = temp[i]['bounding_box']
+                w = box[2]-box[0]
+                h = box[3]-box[1]
+                x_1 = box[0]
+                y_1 = box[1]
+                bbox=[x_1,y_1,w,h]
+                cat = temp[i]['category_id']
+                style = temp[i]['style']
+                seg = temp[i]['segmentation']
+                landmarks = temp[i]['landmarks']
 
-                    points_x = landmarks[0::3]
-                    points_y = landmarks[1::3]
-                    points_v = landmarks[2::3]
-                    points_x = np.array(points_x)
-                    points_y = np.array(points_y)
-                    points_v = np.array(points_v)
+                points_x = landmarks[0::3]
+                points_y = landmarks[1::3]
+                points_v = landmarks[2::3]
+                points_x = np.array(points_x)
+                points_y = np.array(points_y)
+                points_v = np.array(points_v)
 
-                    if cat == 1:
-                        for n in range(0, 25):
-                            points[3 * n] = points_x[n]
-                            points[3 * n + 1] = points_y[n]
-                            points[3 * n + 2] = points_v[n]
-                    elif cat ==2:
-                        for n in range(25, 58):
-                            points[3 * n] = points_x[n - 25]
-                            points[3 * n + 1] = points_y[n - 25]
-                            points[3 * n + 2] = points_v[n - 25]
-                    elif cat ==3:
-                        for n in range(58, 89):
-                            points[3 * n] = points_x[n - 58]
-                            points[3 * n + 1] = points_y[n - 58]
-                            points[3 * n + 2] = points_v[n - 58]
-                    elif cat == 4:
-                        for n in range(89, 128):
-                            points[3 * n] = points_x[n - 89]
-                            points[3 * n + 1] = points_y[n - 89]
-                            points[3 * n + 2] = points_v[n - 89]
-                    elif cat == 5:
-                        for n in range(128, 143):
-                            points[3 * n] = points_x[n - 128]
-                            points[3 * n + 1] = points_y[n - 128]
-                            points[3 * n + 2] = points_v[n - 128]
-                    elif cat == 6:
-                        for n in range(143, 158):
-                            points[3 * n] = points_x[n - 143]
-                            points[3 * n + 1] = points_y[n - 143]
-                            points[3 * n + 2] = points_v[n - 143]
-                    elif cat == 7:
-                        for n in range(158, 168):
-                            points[3 * n] = points_x[n - 158]
-                            points[3 * n + 1] = points_y[n - 158]
-                            points[3 * n + 2] = points_v[n - 158]
-                    elif cat == 8:
-                        for n in range(168, 182):
-                            points[3 * n] = points_x[n - 168]
-                            points[3 * n + 1] = points_y[n - 168]
-                            points[3 * n + 2] = points_v[n - 168]
-                    elif cat == 9:
-                        for n in range(182, 190):
-                            points[3 * n] = points_x[n - 182]
-                            points[3 * n + 1] = points_y[n - 182]
-                            points[3 * n + 2] = points_v[n - 182]
-                    elif cat == 10:
-                        for n in range(190, 219):
-                            points[3 * n] = points_x[n - 190]
-                            points[3 * n + 1] = points_y[n - 190]
-                            points[3 * n + 2] = points_v[n - 190]
-                    elif cat == 11:
-                        for n in range(219, 256):
-                            points[3 * n] = points_x[n - 219]
-                            points[3 * n + 1] = points_y[n - 219]
-                            points[3 * n + 2] = points_v[n - 219]
-                    elif cat == 12:
-                        for n in range(256, 275):
-                            points[3 * n] = points_x[n - 256]
-                            points[3 * n + 1] = points_y[n - 256]
-                            points[3 * n + 2] = points_v[n - 256]
-                    elif cat == 13:
-                        for n in range(275, 294):
-                            points[3 * n] = points_x[n - 275]
-                            points[3 * n + 1] = points_y[n - 275]
-                            points[3 * n + 2] = points_v[n - 275]
-                    num_points = len(np.where(points_v > 0)[0])
+                if cat == 1:
+                    for n in range(0, 25):
+                        points[3 * n] = points_x[n]
+                        points[3 * n + 1] = points_y[n]
+                        points[3 * n + 2] = points_v[n]
+                elif cat ==2:
+                    for n in range(25, 58):
+                        points[3 * n] = points_x[n - 25]
+                        points[3 * n + 1] = points_y[n - 25]
+                        points[3 * n + 2] = points_v[n - 25]
+                elif cat ==3:
+                    for n in range(58, 89):
+                        points[3 * n] = points_x[n - 58]
+                        points[3 * n + 1] = points_y[n - 58]
+                        points[3 * n + 2] = points_v[n - 58]
+                elif cat == 4:
+                    for n in range(89, 128):
+                        points[3 * n] = points_x[n - 89]
+                        points[3 * n + 1] = points_y[n - 89]
+                        points[3 * n + 2] = points_v[n - 89]
+                elif cat == 5:
+                    for n in range(128, 143):
+                        points[3 * n] = points_x[n - 128]
+                        points[3 * n + 1] = points_y[n - 128]
+                        points[3 * n + 2] = points_v[n - 128]
+                elif cat == 6:
+                    for n in range(143, 158):
+                        points[3 * n] = points_x[n - 143]
+                        points[3 * n + 1] = points_y[n - 143]
+                        points[3 * n + 2] = points_v[n - 143]
+                elif cat == 7:
+                    for n in range(158, 168):
+                        points[3 * n] = points_x[n - 158]
+                        points[3 * n + 1] = points_y[n - 158]
+                        points[3 * n + 2] = points_v[n - 158]
+                elif cat == 8:
+                    for n in range(168, 182):
+                        points[3 * n] = points_x[n - 168]
+                        points[3 * n + 1] = points_y[n - 168]
+                        points[3 * n + 2] = points_v[n - 168]
+                elif cat == 9:
+                    for n in range(182, 190):
+                        points[3 * n] = points_x[n - 182]
+                        points[3 * n + 1] = points_y[n - 182]
+                        points[3 * n + 2] = points_v[n - 182]
+                elif cat == 10:
+                    for n in range(190, 219):
+                        points[3 * n] = points_x[n - 190]
+                        points[3 * n + 1] = points_y[n - 190]
+                        points[3 * n + 2] = points_v[n - 190]
+                elif cat == 11:
+                    for n in range(219, 256):
+                        points[3 * n] = points_x[n - 219]
+                        points[3 * n + 1] = points_y[n - 219]
+                        points[3 * n + 2] = points_v[n - 219]
+                elif cat == 12:
+                    for n in range(256, 275):
+                        points[3 * n] = points_x[n - 256]
+                        points[3 * n + 1] = points_y[n - 256]
+                        points[3 * n + 2] = points_v[n - 256]
+                elif cat == 13:
+                    for n in range(275, 294):
+                        points[3 * n] = points_x[n - 275]
+                        points[3 * n + 1] = points_y[n - 275]
+                        points[3 * n + 2] = points_v[n - 275]
+                num_points = len(np.where(points_v > 0)[0])
 
-                    dataset['annotations'].append({
-                        'area': w*h,
-                        'bbox': bbox,
-                        'category_id': cat,
-                        'id': sub_index,
-                        'pair_id': pair_id,
-                        'image_id': num,
-                        'iscrowd': 0,
-                        'style': style,
-                        'num_keypoints':num_points,
-                        'keypoints':points.tolist(),
-                        'segmentation': seg,
-                    })
+                dataset['annotations'].append({
+                    'area': w*h,
+                    'bbox': bbox,
+                    'category_id': cat,
+                    'id': sub_index,
+                    'pair_id': pair_id,
+                    'image_id': index+1,
+                    'iscrowd': 0,
+                    'style': style,
+                    'num_keypoints':num_points,
+                    'keypoints':points.tolist(),
+                    'segmentation': seg,
+                })
 
-
-json_name = '/.../deepfashion2.json'
-with open(json_name, 'w') as f:
+with open(os.path.join(flags.dataset_dir, flags.json_output_filename), 'w') as f:
   json.dump(dataset, f)
 
 
